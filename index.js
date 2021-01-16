@@ -4,16 +4,20 @@ const app = express()
 const port = 5000 //백서버 포트 
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const { auth } = require('./middleware/auth')
 const { User } = require('./models/User');
-const config = require('./config/key')
+const config = require('./config/key');
+
 //bodyPaser는 Clinet로 부터 오는 정보를 분석할 수 있다.
 //application/x-www0urlencoded
+
 app.use(bodyParser.urlencoded({extended: true}));
 //application/json
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const { Router } = require('express');
 mongoose.connect(config.mongoURI, {
     useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false
 }).then(() => console.log('MongoDB connect...'))
@@ -22,7 +26,7 @@ mongoose.connect(config.mongoURI, {
 
 app.get('/', (req, res) => res.send('Hello 안녕하세요!!!')) //루트디렉토리 
 
-app.post('/register', (req, res)=> {
+app.post('/api/users/register', (req, res)=> {
     //회원가입 할 때 필요한 정보들을 client 에서 가져오면
     //그것들을 데이터 베이스에 넣어줌
 
@@ -37,7 +41,7 @@ app.post('/register', (req, res)=> {
     })
 })
 
-app.post('/login',(req, res)=> {
+app.post('/api/users/login',(req, res)=> {
     //요청된 이메일 데이터베이스에서 조회
         User.findOne({email: req.body.email}, (err, user) => {
             if(!user) {
@@ -75,7 +79,24 @@ app.post('/login',(req, res)=> {
     })
 
 
-    //비밀번호 확인 후 토큰 생성
+    //role 1 어드민 2 특정부서 어드민 ..
+    //role 0 일반유저 role 이 0이아니면 관리자 
 
+    app.get('/api/users/auth', auth ,(req , res)=>{
+    // auth -> 콜백펑션 하기전에 중간에서 미들웨어 역할
+    //여기까지 미들웨어를 통과해 왔다는 얘기는 Authenticate가 True라는 말
+    res.status(200).json({
+        //클라이언트에 전달
+        _id:req.user._id,
+        isAdmin: req.user.role === 0? false : true,
+        isAuth: true,
+        email: req.user.email,
+        name: req.user.name,
+        lastname: req.user.lastname,
+        role: req.user.role,
+        image: req.user.image
+        
+    })
+    })
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))
